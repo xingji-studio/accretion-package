@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "app": {
+    "id": "com.example.accretion-demo",
+    "name": "Accretion 示例工具箱",
+    "version": "1.0.0",
+    "publisher": "Example"
+  },
+  "inputs": {
+    "windows-x64": "../build/demo/windows",
+    "linux-x64": "../build/demo/linux",
+    "xj380-x64": "../build/demo/xj380"
+  },
+  "applications": {
+    "main": {
+      "windows": "toolbox.exe",
+      "linux": "toolbox",
+      "xj380": "toolbox.elf"
+    },
+    "cli": {
+      "windows": "toolbox-cli.exe",
+      "linux": "toolbox-cli",
+      "xj380": "toolbox-cli.elf",
+      "terminal": true
+    }
+  },
+  "ui": { "modes": ["gui", "tui"], "default": "gui", "language": "zh-CN" },
+  "install": {
+    "scope": "user",
+    "allowScopeChange": true,
+    "allowPathChange": true,
+    "paths": {
+      "windows": { "user": "${paths.userPrograms}/${app.name}", "machine": "${paths.machinePrograms}/${app.name}" },
+      "linux": { "user": "${user.home}/.local/opt/${app.id}", "machine": "/opt/${app.id}" },
+      "xj380": { "user": "${user.home}/Applications/${app.id}", "machine": "/apps/${app.id}" }
+    }
+  },
+  "branding": { "licenses": { "zh-CN": "license-zh-CN.txt" } },
+  "completion": { "application": "main", "launchDefault": false },
+  "environment": [
+    { "id": "home", "name": "TOOLBOX_HOME", "value": "${install.dir}", "operation": "setIfMissing", "defaultChecked": true },
+    { "id": "config", "name": "TOOLBOX_CONFIG", "value": "${install.dir}/config", "operation": "setIfMissing", "defaultChecked": true },
+    { "id": "path", "name": "PATH", "value": "${install.dir}", "operation": "appendUnique", "defaultChecked": true }
+  ],
+  "shortcuts": [
+    { "id": "desktop", "name": "示例工具箱", "application": "main", "location": "desktop", "defaultChecked": true },
+    { "id": "cli", "name": "示例工具箱命令行", "application": "cli", "location": "desktop", "terminal": true, "defaultChecked": false },
+    { "id": "menu", "name": "示例工具箱", "application": "main", "location": "menu", "defaultChecked": true }
+  ]
+}

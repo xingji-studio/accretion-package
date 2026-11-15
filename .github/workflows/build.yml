@@ -1,0 +1,66 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux-and-cross:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install native and cross tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang mingw-w64 cmake ninja-build qt6-base-dev libgtk-3-0 xvfb
+      - name: Build six native runtime templates
+        run: python tools/build.py --target all --jobs 4
+      - name: Core and XAPI contracts
+        run: |
+          ./build/ap-core-tests
+          ./build/ap-xapi-tests
+          ./build/ap-xj-adapter-tests
+      - name: Native Linux and EPF integration
+        run: xvfb-run -a python tests/integration.py --build-dir build
+      - name: CMake and Qt workbench
+        run: |
+          cmake -S . -B build/cmake -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/cmake -j 4
+          xvfb-run -a ctest --test-dir build/cmake --output-on-failure
+      - name: One-command portable GUI package
+        run: |
+          make package
+          python tests/packaging.py --package-dir dist/accretion-package-linux-x64
+        env:
+          AP_FRONTEND: gui
+          AP_RUNTIME_PLATFORMS: all
+      - name: Native XJ380 CMake adapter linkage
+        run: |
+          cmake -S . -B build/xj380 -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/xj380-toolchain.cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DAP_XJ380_ADAPTER_SOURCE=examples/xj380_adapter.cpp
+          cmake --build build/xj380 -j 4
+          nm build/xj380/ap-stubs/ap-setup-xj380-x64-gui.elf | rg ' T ap_xj380_query_adapter_v1$'
+      - name: Memory checks
+        run: |
+          python tools/build.py --target linux --out build/sanitize --sanitize --jobs 4
+          ./build/sanitize/ap-core-tests
+          xvfb-run -a python tests/integration.py --build-dir build/sanitize
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Configure MSVC x64
+        run: cmake -S . -B build/native -A x64 -DAP_BUILD_WORKBENCH=OFF
+      - name: Build native GUI, TUI and packager
+        run: cmake --build build/native --config Release --parallel 4
+      - name: Native Windows install and registry tests
+        run: ctest --test-dir build/native -C Release --output-on-failure
+      - name: One-command portable TUI package
+        run: |
+          python tools/project.py package --frontend tui
+          python tests/packaging.py --package-dir dist/accretion-package-windows-x64

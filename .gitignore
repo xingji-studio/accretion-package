@@ -1,0 +1,7 @@
+/build/
+/out/
+/dist/
+/.cache/
+__pycache__/
+*.pyc
+*.acpkg
